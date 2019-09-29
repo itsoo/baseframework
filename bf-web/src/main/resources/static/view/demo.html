@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <link rel="icon" href="./favicon.ico">
+  <title>基础后端框架 - 示例</title>
+</head>
+<body>
+<a href="./logout">注销</a>
+<div id="rows"></div>
+<div id="list"></div>
+<script>
+  (function () {
+    let xhr1 = new XMLHttpRequest()
+    xhr1.open('POST', `./demo/add`, false)
+    xhr1.setRequestHeader("Content-Type", "application/json")
+    xhr1.onload = function () {
+      document.getElementById('rows').innerHTML = `影响行数: ${this.responseText}`
+    }
+    xhr1.send('{}')
+
+    let xhr2 = new XMLHttpRequest()
+    xhr2.open('GET', `./demo/query_list`, false)
+    xhr2.onload = function () {
+      document.getElementById('list').innerHTML = `数据列表: ${this.responseText}`
+    }
+    xhr2.send()
+  })()
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+# shiro config
+shiro:
+  appServer: http://192.168.1.2:8080/${shiro.projectCode}-web
+  casServer: http://192.168.1.3/cas
+  securityServer: http://192.168.1.4/security-server/
+# logback config
+logging:
+  # TRACE < DEBUG < INFO < WARN < ERROR
+  log-level: DEBUG

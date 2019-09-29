@@ -1,0 +1,9 @@
+# shiro config
+shiro:
+  appServer: http://bf.github.com.cn/${shiro.projectCode}-web
+  casServer: http://uap.github.com.cn/cas
+  securityServer: http://uap.github.com.cn/security-server
+# logback config
+logging:
+  # TRACE < DEBUG < INFO < WARN < ERROR
+  log-level: INFO

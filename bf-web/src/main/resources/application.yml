@@ -1,0 +1,13 @@
+# application config
+application:
+  env: ${spring.profiles.active}
+  title: 基础后端框架 - 示例
+  description: ${application.title} RESTful API 描述文档
+  version: 1.0
+  basePackage: com.github.webapp.module
+  pathReg: "/.*"
+
+spring:
+  profiles:
+    active: dev
+    include: common

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <springProperty scope="context" name="LOG_HOME" source="logging.log_home"/>
+    <springProperty scope="context" name="LOG_NAME" source="logging.log_name"/>
+    <springProperty scope="context" name="LOG_LEVEL" source="logging.log_level"/>
+
+    <!-- 控制台日志配置 -->
+    <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %boldYellow([%thread]) %highlight(%-5level) %boldGreen(%logger) - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 日志文件配置 -->
+    <appender name="appLogAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_HOME}/${LOG_NAME}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_HOME}/${LOG_NAME}-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <MaxHistory>30</MaxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] - [%-5level] [%logger : %line] - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 日志实例配置 -->
+    <logger name="org.mybatis" level="${LOG_LEVEL}"/>
+    <logger name="org.springframework" level="${LOG_LEVEL}" additivity="false"/>
+
+    <root level="${LOG_LEVEL}">
+        <appender-ref ref="stdout"/>
+        <appender-ref ref="appLogAppender"/>
+    </root>
+</configuration>

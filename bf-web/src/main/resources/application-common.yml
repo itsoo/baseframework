@@ -1,0 +1,41 @@
+# datasource config
+spring:
+  datasource:
+    jndi-name: jdbc/github-db-pomDS_oracle
+  http:
+    encoding:
+      force: true
+  servlet:
+    multipart:
+      max-file-size: 200MB
+      max-request-size: 200MB
+  jmx:
+    enabled: false
+
+# mybatis config
+mybatis:
+  typeAliasesPackage: mapper
+  mapperLocations: classpath*:com/github/webapp/module/**/*.xml
+  plugin:
+    dialect: oracle
+    regexp: .*ListPage.*
+    pageSize: 10
+
+# logback config
+logging:
+  config: classpath:logback-spring.xml
+  log-home: /home/java/logs
+  log-name: ${shiro.projectCode}-web
+
+# 错误页文件路径配置
+errors:
+  error-page-path: /view
+
+# shiro config
+shiro:
+  failureUrl: /loginFailure
+  successUrl: /
+  projectCode: bf
+  casFilter: /${shiro.projectCode}-cas
+  ## 配置多路径时用 "," 分隔
+  staticResourcePath: /assets/*,/css/*,/fonts/*,/js/*

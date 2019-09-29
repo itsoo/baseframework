@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <link rel="icon" href="./favicon.ico">
+  <title>基础后端框架 - 示例</title>
+</head>
+<body>
+<a href="./logout">注销</a>
+<div id="app"></div>
+<script>
+  (function () {
+    let xhr = new XMLHttpRequest()
+    xhr.open('GET', document.location, false)
+    xhr.send()
+
+    let array = xhr
+      .getAllResponseHeaders()
+      .toLowerCase()
+      .split('\n')
+      .filter(t => t.startsWith('token'))
+    if (array && array.length === 1) {
+      document.getElementById('app').innerHTML
+        = array[0].split(':')[1].toUpperCase()
+    }
+
+    setTimeout(() => location.reload(), 60000)
+  })()
+</script>
+</body>
+</html>
