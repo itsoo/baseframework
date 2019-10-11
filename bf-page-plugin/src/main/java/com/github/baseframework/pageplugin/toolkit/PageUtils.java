@@ -1,7 +1,5 @@
 package com.github.baseframework.pageplugin.toolkit;
 
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.Map;
 
 /**
@@ -9,7 +7,6 @@ import java.util.Map;
  *
  * @author zxy
  */
-@Slf4j
 public class PageUtils {
 
     public static int toNumber(Object obj) {

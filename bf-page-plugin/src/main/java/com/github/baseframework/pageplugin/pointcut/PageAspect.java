@@ -1,7 +1,6 @@
 package com.github.baseframework.pageplugin.pointcut;
 
 import com.github.baseframework.pageplugin.toolkit.ReflectHelper;
-import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -17,7 +16,6 @@ import static com.github.baseframework.pageplugin.PageInfo.*;
  *
  * @author zxy
  */
-@Slf4j
 @Aspect
 @Component
 public class PageAspect {

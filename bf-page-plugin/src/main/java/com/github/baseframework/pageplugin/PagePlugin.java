@@ -31,9 +31,7 @@ import static com.github.baseframework.pageplugin.PageInfo.*;
  */
 @Slf4j
 @Component
-@Intercepts(
-    @Signature(
-        type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class}))
+@Intercepts(@Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class}))
 public class PagePlugin implements Interceptor {
 
     /**

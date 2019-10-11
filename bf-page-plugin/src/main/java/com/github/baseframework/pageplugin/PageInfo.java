@@ -1,10 +1,11 @@
 package com.github.baseframework.pageplugin;
 
-import com.github.baseframework.pageplugin.toolkit.PageUtils;
 import com.github.baseframework.pageplugin.toolkit.ReflectHelper;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import static com.github.baseframework.pageplugin.toolkit.PageUtils.*;
 
 /**
  * 结果页
@@ -74,7 +75,7 @@ public final class PageInfo {
      * @return int
      */
     public static int getStartRows(Map<String, Object> map) {
-        return (PageUtils.getNumber(map, PAGE_NUM) - 1) * PageUtils.getNumber(map, PAGE_SIZE);
+        return (getNumber(map, PAGE_NUM) - 1) * getNumber(map, PAGE_SIZE);
     }
 
     /**
@@ -83,7 +84,7 @@ public final class PageInfo {
      * @return int
      */
     public static int getEndRows(Map<String, Object> map) {
-        return PageUtils.getNumber(map, PAGE_NUM) * PageUtils.getNumber(map, PAGE_SIZE);
+        return getNumber(map, PAGE_NUM) * getNumber(map, PAGE_SIZE);
     }
 
     /**
@@ -94,16 +95,16 @@ public final class PageInfo {
      */
     public static boolean isFalsePage(Object obj) {
         if (obj instanceof Map) {
-            return PageUtils.isFalseValue(((Map) obj).get(PAGE_LIST));
+            return isFalseValue(((Map) obj).get(PAGE_LIST));
         }
 
         try {
-            return PageUtils.isFalseValue(ReflectHelper.getFieldValue(obj, PAGE_LIST));
+            return isFalseValue(ReflectHelper.getFieldValue(obj, PAGE_LIST));
         } catch (NoSuchFieldException | IllegalAccessException e) {
             try {
                 Map map = (Map) ReflectHelper.getFieldValue(obj, PAGE);
                 if (map != null) {
-                    return PageUtils.isFalseValue(map.get(PAGE_LIST));
+                    return isFalseValue(map.get(PAGE_LIST));
                 }
             } catch (Exception ignore) {}
         }
@@ -127,7 +128,7 @@ public final class PageInfo {
     }
 
     private static void setKeyAndValueOfMap(Map<String, Object> map, String key, Object value) {
-        if (!PageUtils.isEmpty(value)) {
+        if (!isEmpty(value)) {
             map.put(key, value);
         }
     }
@@ -137,30 +138,30 @@ public final class PageInfo {
 
         Object oPageNum = map.get(PAGE_NUM);
         Object oTotalPage = map.get(TOTAL_PAGE);
-        if (PageUtils.isEmpty(oPageNum)) {
+        if (isEmpty(oPageNum)) {
             map.put(PAGE_NUM, 1);
         } else {
-            int pageNum = PageUtils.toNumber(oPageNum);
-            int totalPage = PageUtils.toNumber(oTotalPage);
+            int pageNum = toNumber(oPageNum);
+            int totalPage = toNumber(oTotalPage);
             map.put(PAGE_NUM, Math.min(Math.max(1, pageNum), totalPage));
         }
     }
 
     private static void setPageSize(Map<String, Object> map) {
         Object pageSize = map.get(PAGE_SIZE);
-        if (PageUtils.isEmpty(pageSize)) {
+        if (isEmpty(pageSize)) {
             map.put(PAGE_SIZE, defaultPageSize);
         } else {
-            map.put(PAGE_SIZE, PageUtils.toNumber(pageSize));
+            map.put(PAGE_SIZE, toNumber(pageSize));
         }
     }
 
     private static void setTotalPage(Map<String, Object> map) {
-        Object tcObj = map.get(TOTAL_COUNT);
-        Object psObj = map.get(PAGE_SIZE);
-        if (!PageUtils.isEmpty(tcObj) && !PageUtils.isEmpty(psObj)) {
-            int totalCount = PageUtils.toNumber(tcObj);
-            int pageSize = PageUtils.toNumber(psObj);
+        Object oTotalCount = map.get(TOTAL_COUNT);
+        Object oPageSize = map.get(PAGE_SIZE);
+        if (!isEmpty(oTotalCount) && !isEmpty(oPageSize)) {
+            int totalCount = toNumber(oTotalCount);
+            int pageSize = toNumber(oPageSize);
             map.put(TOTAL_PAGE, (int) Math.ceil(((double) totalCount) / pageSize));
 
             return;
@@ -170,10 +171,10 @@ public final class PageInfo {
     }
 
     private static void setHasPrePage(Map<String, Object> map) {
-        map.put(HAS_PRE_PAGE, PageUtils.getNumber(map, PAGE_NUM) > 1);
+        map.put(HAS_PRE_PAGE, getNumber(map, PAGE_NUM) > 1);
     }
 
     private static void setHasNextPage(Map<String, Object> map) {
-        map.put(HAS_NEXT_PAGE, PageUtils.getNumber(map, PAGE_NUM) < PageUtils.getNumber(map, TOTAL_PAGE));
+        map.put(HAS_NEXT_PAGE, getNumber(map, PAGE_NUM) < getNumber(map, TOTAL_PAGE));
     }
 }
