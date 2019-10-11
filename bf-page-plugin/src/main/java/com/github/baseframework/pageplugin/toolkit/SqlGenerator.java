@@ -29,8 +29,10 @@ public class SqlGenerator {
      * @param sql      String
      * @param pageInfo Map
      * @return page sql
+     * @throws PropertyException PropertyException
      */
-    public static String generatePageSql(String dialect, String sql, Map<String, Object> pageInfo) {
+    public static String generatePageSql(String dialect, String sql, Map<String, Object> pageInfo)
+            throws PropertyException {
         if (pageInfo != null) {
             int startRows = getStartRows(pageInfo);
 
