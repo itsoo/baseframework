@@ -25,7 +25,7 @@ public interface Dao {
      * @param params    List
      * @return int
      */
-    int batchAdd(String handlerId, List params);
+    <T> int batchAdd(String handlerId, List<T> params);
 
     /**
      * 修改
@@ -41,16 +41,16 @@ public interface Dao {
      *
      * @param handlerId String
      * @param params    List
-     * @return
+     * @return int
      */
-    int batchUpdate(String handlerId, List params);
+    <T> int batchUpdate(String handlerId, List<T> params);
 
     /**
      * 删除
      *
      * @param handlerId String
      * @param param     Object
-     * @return
+     * @return int
      */
     int delete(String handlerId, Object param);
 
@@ -59,9 +59,9 @@ public interface Dao {
      *
      * @param handlerId String
      * @param params    List
-     * @return
+     * @return int
      */
-    int batchDelete(String handlerId, List params);
+    <T> int batchDelete(String handlerId, List<T> params);
 
     /**
      * 单条查询

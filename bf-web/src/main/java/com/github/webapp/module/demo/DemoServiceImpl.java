@@ -1,10 +1,10 @@
 package com.github.webapp.module.demo;
 
+import com.github.baseframework.pageplugin.annotation.Page;
 import com.github.webapp.common.dao.Dao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -36,7 +36,8 @@ public class DemoServiceImpl implements DemoService {
     }
 
     @Override
-    public List<Map> queryList() {
-        return dao.findForList(NAMESPACE + "queryList", null);
+    @Page
+    public Object queryList(Object param) {
+        return dao.findForList(NAMESPACE + "queryListPage", param);
     }
 }

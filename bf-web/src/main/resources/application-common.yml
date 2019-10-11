@@ -1,7 +1,7 @@
 # datasource config
 spring:
   datasource:
-    jndi-name: jdbc/github-db-pomDS_oracle
+    jndi-name: jdbc/database-pomDS_oracle
   http:
     encoding:
       force: true

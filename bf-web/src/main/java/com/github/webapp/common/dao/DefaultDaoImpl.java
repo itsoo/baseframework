@@ -31,19 +31,21 @@ public class DefaultDaoImpl implements Dao {
     }
 
     @Override
-    public int batchAdd(String handlerId, List params) {
+    public <T> int batchAdd(String handlerId, List<T> params) {
         int result = 0;
         SqlSessionFactory factory = sqlSessionTemplate.getSqlSessionFactory();
 
         try (SqlSession sqlSession = factory.openSession(ExecutorType.BATCH, false)) {
-            for (int i = 0, size = params == null ? 0 : params.size(); i < size; i++) {
-                sqlSession.insert(handlerId, params.get(i));
-                result++;
-            }
+            if (params != null) {
+                for (T param : params) {
+                    sqlSession.insert(handlerId, param);
+                    result++;
+                }
 
-            sqlSession.flushStatements();
-            sqlSession.commit();
-            sqlSession.clearCache();
+                sqlSession.flushStatements();
+                sqlSession.commit();
+                sqlSession.clearCache();
+            }
         }
 
         return result;
@@ -55,19 +57,21 @@ public class DefaultDaoImpl implements Dao {
     }
 
     @Override
-    public int batchUpdate(String handlerId, List params) {
+    public <T> int batchUpdate(String handlerId, List<T> params) {
         int result = 0;
         SqlSessionFactory factory = sqlSessionTemplate.getSqlSessionFactory();
 
         try (SqlSession sqlSession = factory.openSession(ExecutorType.BATCH, false)) {
-            for (int i = 0, size = params == null ? 0 : params.size(); i < size; i++) {
-                sqlSession.update(handlerId, params.get(i));
-                result++;
-            }
+            if (params != null) {
+                for (T param : params) {
+                    sqlSession.update(handlerId, param);
+                    result++;
+                }
 
-            sqlSession.flushStatements();
-            sqlSession.commit();
-            sqlSession.clearCache();
+                sqlSession.flushStatements();
+                sqlSession.commit();
+                sqlSession.clearCache();
+            }
         }
 
         return result;
@@ -79,19 +83,21 @@ public class DefaultDaoImpl implements Dao {
     }
 
     @Override
-    public int batchDelete(String handlerId, List params) {
+    public <T> int batchDelete(String handlerId, List<T> params) {
         int result = 0;
         SqlSessionFactory factory = sqlSessionTemplate.getSqlSessionFactory();
 
         try (SqlSession sqlSession = factory.openSession(ExecutorType.BATCH, false)) {
-            for (int i = 0, size = params == null ? 0 : params.size(); i < size; i++) {
-                sqlSession.delete(handlerId, params.get(i));
-                result++;
-            }
+            if (params != null) {
+                for (T param : params) {
+                    sqlSession.delete(handlerId, param);
+                    result++;
+                }
 
-            sqlSession.flushStatements();
-            sqlSession.commit();
-            sqlSession.clearCache();
+                sqlSession.flushStatements();
+                sqlSession.commit();
+                sqlSession.clearCache();
+            }
         }
 
         return result;
@@ -107,11 +113,9 @@ public class DefaultDaoImpl implements Dao {
         if (param instanceof Collection) {
             List<T> result = new LinkedList<>();
 
-            for (Object o : (Collection) param) {
-                T t = sqlSessionTemplate.selectOne(handlerId, o);
-
-                if (null != t) {
-                    result.add(t);
+            for (Object obj : (Collection) param) {
+                if (obj != null) {
+                    result.add(sqlSessionTemplate.selectOne(handlerId, obj));
                 }
             }
 

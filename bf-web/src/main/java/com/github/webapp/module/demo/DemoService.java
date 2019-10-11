@@ -1,6 +1,5 @@
 package com.github.webapp.module.demo;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -37,7 +36,8 @@ public interface DemoService {
     /**
      * queryList
      *
-     * @return List<Map>
+     * @param param Object
+     * @return Object
      */
-    List<Map> queryList();
+    Object queryList(Object param);
 }

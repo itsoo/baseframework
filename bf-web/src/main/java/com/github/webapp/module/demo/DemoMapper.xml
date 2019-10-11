@@ -9,7 +9,7 @@
         (seq_baseframework_demo.nextval, #{name}, #{address})
     </insert>
 
-    <select id="queryList" resultType="HashMap">
+    <select id="queryListPage" resultType="HashMap">
         SELECT * FROM jv_baseframework_demo
     </select>
 </mapper>

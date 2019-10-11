@@ -1,21 +1,28 @@
 package com.github.baseframework.pageplugin;
 
-import com.github.baseframework.pageplugin.util.PageUtil;
+import com.github.baseframework.pageplugin.toolkit.PageUtils;
+import com.github.baseframework.pageplugin.toolkit.ReflectHelper;
+import com.github.baseframework.pageplugin.toolkit.SqlGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
+import org.apache.ibatis.mapping.ParameterMapping;
 import org.apache.ibatis.plugin.*;
-import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.reflection.SystemMetaObject;
+import org.apache.ibatis.session.Configuration;
 import org.springframework.stereotype.Component;
 
 import javax.xml.bind.PropertyException;
-import java.lang.reflect.Field;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+
+import static com.github.baseframework.pageplugin.PageInfo.*;
 
 /**
  * 分页插件
@@ -24,8 +31,9 @@ import java.util.Properties;
  */
 @Slf4j
 @Component
-@Intercepts(@Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class}))
-@SuppressWarnings("unused")
+@Intercepts(
+    @Signature(
+        type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class}))
 public class PagePlugin implements Interceptor {
 
     /**
@@ -38,119 +46,124 @@ public class PagePlugin implements Interceptor {
      */
     private static String regexp;
 
-    /**
-     * 分页拦截方法
-     *
-     * @param ivk Invocation
-     * @return Object
-     * @throws Throwable Throwable
-     */
     @Override
-    public Object intercept(Invocation ivk) throws Throwable {
-        if (ivk.getTarget() instanceof StatementHandler) {
-            StatementHandler handler = (StatementHandler) ivk.getTarget();
-            MetaObject metaHandler = SystemMetaObject.forObject(handler);
-            MappedStatement stmt = (MappedStatement) metaHandler.getValue("delegate.mappedStatement");
+    public Object plugin(Object target) {
+        return Plugin.wrap(target, this);
+    }
 
-            if (stmt.getId().matches(regexp)) {
-                BoundSql boundSql = (BoundSql) metaHandler.getValue("delegate.boundSql");
+    @Override
+    public void setProperties(Properties properties) {
+        dialect = properties.getProperty(DIALECT);
+        if (PageUtils.isEmpty(dialect)) {
+            log.error("必要的属性为空", new PropertyException("dialect 属性用于指定数据库方言"));
+        }
 
-                Object paramObject = boundSql.getParameterObject();
-                Object object = PageUtil.getValueOrDefault(paramObject, PageInfo.getInstance());
+        regexp = properties.getProperty(REGEXP);
+        if (PageUtils.isEmpty(regexp)) {
+            log.error("必要的属性为空", new PropertyException("regexp 属性用于指定 SQL 拦截表达式"));
+        }
 
-                if (!PageInfo.isFalsePage(object)) {
-                    Connection conn = (Connection) ivk.getArgs()[0];
-                    String sql = boundSql.getSql();
-                    int count = PageUtil.queryTotalCount(sql, conn, stmt, boundSql, object);
-                    Map<String, Object> pageInfo = initPageInfo(object, count);
+        String pageSize = properties.getProperty(PAGE_SIZE);
+        if (!PageUtils.isEmpty(pageSize)) {
+            defaultPageSize = PageUtils.toNumber(pageSize);
+        }
+    }
 
-                    // 处理分页查询前置条件
-                    int pageSize = (int) pageInfo.getOrDefault(PageInfo.PAGE_SIZE, PageInfo.defaultPageSize);
+    @Override
+    public Object intercept(Invocation invocation) throws Throwable {
+        if (invocation.getTarget() instanceof StatementHandler) {
+            StatementHandler handler = (StatementHandler) invocation.getTarget();
+
+            if (getMappedStatement(handler).getId().matches(regexp)) {
+                BoundSql boundSql = getBoundSql(handler);
+                Object param = PageUtils.getOrDefault(boundSql.getParameterObject(), getInstance());
+
+                if (!isFalsePage(param)) {
+                    String countSql = SqlGenerator.generateCountSql(boundSql.getSql());
+                    int count = queryTotalCount(handler, countSql, (Connection) invocation.getArgs()[0], param);
+                    Map<String, Object> pageInfo = handlePageInfo(param, count);
+
+                    int pageSize = (int) pageInfo.get(PAGE_SIZE);
                     Map<String, Object> condition = count <= pageSize ? null : pageInfo;
 
-                    String pageSql = PageUtil.generatePageSql(dialect, sql, condition);
-
-                    ReflectHelper.setValueByFieldName(boundSql, "sql", pageSql);
+                    String pageSql = SqlGenerator.generatePageSql(dialect, boundSql.getSql(), condition);
+                    ReflectHelper.setFieldValue(boundSql, "sql", pageSql);
                 }
             }
         }
 
-        return ivk.proceed();
+        return invocation.proceed();
     }
 
     /**
-     * 注入插件
+     * 查询总记录数
      *
-     * @param arg0 Object
-     * @return Object
+     * @param handler    StatementHandler
+     * @param sql        String
+     * @param connection Connection
+     * @param obj        Object
+     * @return int
+     * @throws Throwable Throwable
      */
-    @Override
-    public Object plugin(Object arg0) { return Plugin.wrap(arg0, this); }
+    private int queryTotalCount(StatementHandler handler, String sql, Connection connection, Object obj)
+            throws Throwable {
+        BoundSql boundSql = getBoundSql(handler);
 
-    /**
-     * 注入属性
-     *
-     * @param p Properties
-     */
-    @Override
-    public void setProperties(Properties p) {
-        dialect = p.getProperty(PageInfo.DIALECT);
-        if (PageUtil.isEmpty(dialect)) {
-            log.error("必须的属性注入异常", new PropertyException("dialect 属性用于指定数据库方言"));
-        }
+        Configuration configuration = getMappedStatement(handler).getConfiguration();
+        List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
+        BoundSql countBoundSql = new BoundSql(configuration, sql, parameterMappings, obj);
 
-        regexp = p.getProperty(PageInfo.REGEXP);
-        if (PageUtil.isEmpty(regexp)) {
-            log.error("必须的属性注入异常", new PropertyException("regexp 属性用于指定 SQL 拦截表达式"));
-        }
+        ReflectHelper.copyObjectField(boundSql, countBoundSql, "metaParameters");
+        ReflectHelper.copyObjectField(boundSql, countBoundSql, "additionalParameters");
 
-        // 设置 pageSize 初始值
-        String pageSize = p.getProperty(PageInfo.PAGE_SIZE);
-        if (!PageUtil.isEmpty(pageSize)) {
-            PageInfo.defaultPageSize = Integer.parseInt(pageSize);
+        try (PreparedStatement countStatement = connection.prepareStatement(sql)) {
+            handler.getParameterHandler().setParameters(countStatement);
+
+            try (ResultSet rs = countStatement.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
         }
     }
 
     /**
-     * 初始化 PageInfo
+     * 设置分页相关信息
      *
-     * @param obj   Object
+     * @param param Object
      * @param count int
      * @return Map
      * @throws Throwable Throwable
      */
     @SuppressWarnings("unchecked")
-    private Map<String, Object> initPageInfo(Object obj, int count) throws Throwable {
-        // 参数为 Map
-        if (obj instanceof Map) {
-            Map<String, Object> param = (Map) obj;
-            Map<String, Object> map = new HashMap<>(param);
-
-            Map<String, Object> pageInfo = (Map) map.get(PageInfo.PAGE);
-            if (pageInfo == null) {
-                map.put(PageInfo.TOTAL_COUNT, count);
-                pageInfo = PageInfo.getInstance(map);
-            }
-
-            param.put(PageInfo.PAGE, pageInfo);
+    private Map<String, Object> handlePageInfo(Object param, int count) throws Throwable {
+        if (param instanceof Map) {
+            Map<String, Object> pageInfo = fixedTotalCount(new HashMap(((Map) param)), count);
+            ((Map) param).put(PAGE, pageInfo);
 
             return pageInfo;
         }
 
-        // 参数为其它 Bean
-        Field pageField = ReflectHelper.getFieldByFieldName(obj, PageInfo.PAGE);
-        if (pageField != null) {
-            Map<String, Object> pageInfo = (Map) ReflectHelper.getValueByFieldName(obj, PageInfo.PAGE);
-            pageInfo = PageUtil.getValueOrDefault(pageInfo, new HashMap(16));
-            pageInfo.put(PageInfo.TOTAL_COUNT, count);
-            PageInfo.getInstance(pageInfo);
-
-            // 反射分页对象
-            ReflectHelper.setValueByFieldName(obj, PageInfo.PAGE, pageInfo);
+        if (ReflectHelper.getObjectField(param, PAGE) != null) {
+            Map<String, Object> pageInfo = fixedTotalCount((Map) ReflectHelper.getFieldValue(param, PAGE), count);
+            ReflectHelper.setFieldValue(param, PAGE, pageInfo);
 
             return pageInfo;
         }
 
-        throw new NoSuchFieldException(obj.getClass().getName());
+        throw new NoSuchFieldException("查询参数必须为 Map 类型或包含 Map 类型的 page 属性的实例");
+    }
+
+    private Map<String, Object> fixedTotalCount(Map<String, Object> pageInfo, int count) {
+        pageInfo = PageUtils.getOrDefault(pageInfo, getInstance());
+        pageInfo.put(TOTAL_COUNT, count);
+
+        return getInstance(pageInfo);
+    }
+
+    private MappedStatement getMappedStatement(StatementHandler handler) {
+        return (MappedStatement) SystemMetaObject.forObject(handler).getValue("delegate.mappedStatement");
+    }
+
+    private BoundSql getBoundSql(StatementHandler handler) {
+        return (BoundSql) SystemMetaObject.forObject(handler).getValue("delegate.boundSql");
     }
 }

@@ -1,9 +1,9 @@
-package com.github.baseframework.pageplugin;
+package com.github.baseframework.pageplugin.toolkit;
 
 import java.lang.reflect.Field;
 
 /**
- * 分页插件
+ * ReflectHelper
  *
  * @author zxy
  */
@@ -17,11 +17,11 @@ public class ReflectHelper {
      * @return Field
      * @throws NoSuchFieldException NoSuchFieldException
      */
-    public static Field getFieldByFieldName(Object obj, String fieldName) throws NoSuchFieldException {
+    public static Field getObjectField(Object obj, String fieldName) throws NoSuchFieldException {
         Class<?> clazz = obj.getClass();
         try {
             return clazz.getDeclaredField(fieldName);
-        } catch (Exception e) {
+        } catch (NoSuchFieldException | SecurityException ignore) {
             return clazz.getField(fieldName);
         }
     }
@@ -35,20 +35,16 @@ public class ReflectHelper {
      * @throws IllegalAccessException IllegalAccessException
      * @throws NoSuchFieldException   NoSuchFieldException
      */
-    public static Object getValueByFieldName(Object obj, String fieldName)
+    public static Object getFieldValue(Object obj, String fieldName)
             throws IllegalAccessException, NoSuchFieldException {
-        Object value = null;
-
-        Field field = getFieldByFieldName(obj, fieldName);
-        if (field != null) {
-            if (field.isAccessible()) {
-                value = field.get(obj);
-            } else {
-                field.setAccessible(true);
-                value = field.get(obj);
-                field.setAccessible(false);
-            }
+        Field field = getObjectField(obj, fieldName);
+        if (field.isAccessible()) {
+            return field.get(obj);
         }
+
+        field.setAccessible(true);
+        Object value = field.get(obj);
+        field.setAccessible(false);
 
         return value;
     }
@@ -62,15 +58,31 @@ public class ReflectHelper {
      * @throws NoSuchFieldException   NoSuchFieldException
      * @throws IllegalAccessException IllegalAccessException
      */
-    public static void setValueByFieldName(Object obj, String fieldName, Object value)
+    public static void setFieldValue(Object obj, String fieldName, Object value)
             throws NoSuchFieldException, IllegalAccessException {
-        Field field = getFieldByFieldName(obj, fieldName);
+        Field field = getObjectField(obj, fieldName);
         if (field.isAccessible()) {
             field.set(obj, value);
         } else {
             field.setAccessible(true);
             field.set(obj, value);
             field.setAccessible(false);
+        }
+    }
+
+    /**
+     * 复制对象属性
+     *
+     * @param originObj Object
+     * @param targetObj Object
+     * @param fieldName String
+     * @throws NoSuchFieldException   NoSuchFieldException
+     * @throws IllegalAccessException IllegalAccessException
+     */
+    public static void copyObjectField(Object originObj, Object targetObj, String fieldName)
+            throws NoSuchFieldException, IllegalAccessException {
+        if (getObjectField(originObj, fieldName) != null) {
+            setFieldValue(targetObj, fieldName, getFieldValue(originObj, fieldName));
         }
     }
 }

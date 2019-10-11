@@ -1,7 +1,6 @@
 package com.github.baseframework.pageplugin.pointcut;
 
-import com.github.baseframework.pageplugin.PageInfo;
-import com.github.baseframework.pageplugin.ReflectHelper;
+import com.github.baseframework.pageplugin.toolkit.ReflectHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -10,6 +9,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import static com.github.baseframework.pageplugin.PageInfo.*;
 
 /**
  * 分页切面
@@ -31,16 +32,13 @@ public class PageAspect {
     @Around("@annotation(com.github.baseframework.pageplugin.annotation.Page)")
     public Object around(ProceedingJoinPoint point) throws Throwable {
         Object[] objects = point.getArgs();
-
-        // 记录包含分页参数下标
+        // 分页参数索引
         int index = getTargetIndex(point.getArgs());
-
-        // 未得到分页参数的入参
+        // 未得到分页参数
         if (index == -1) {
             Map<String, Object> pageInfo;
-
             for (Object object : objects) {
-                pageInfo = setPageInfo(point.proceed(), object);
+                pageInfo = handlePageInfo(point.proceed(), object);
                 if (pageInfo != null) {
                     return pageInfo;
                 }
@@ -49,7 +47,7 @@ public class PageAspect {
             return null;
         }
 
-        return setPageInfo(point.proceed(), objects[index]);
+        return handlePageInfo(point.proceed(), objects[index]);
     }
 
     /**
@@ -57,30 +55,21 @@ public class PageAspect {
      *
      * @param objects Object[]
      * @return int
-     * @throws NoSuchFieldException   NoSuchFieldException
      * @throws IllegalAccessException IllegalAccessException
      */
     @SuppressWarnings("unchecked")
-    private int getTargetIndex(Object[] objects) throws NoSuchFieldException, IllegalAccessException {
-        Object obj;
-        Map<String, Object> pageInfo;
-
+    private int getTargetIndex(Object[] objects) throws IllegalAccessException, NoSuchFieldException {
         for (int i = 0, len = objects.length; i < len; i++) {
-            obj = objects[i];
-
-            // 参数为 Map 类型
+            Object obj = objects[i];
             if (obj instanceof Map) {
-                pageInfo = new HashMap((Map) obj);
-                if (hasKey4PageInfo(pageInfo)) {
+                if (hasKeyOfPageInfo((Map) obj)) {
                     return i;
                 }
 
                 continue;
             }
 
-            // 参数为其它 Bean
-            pageInfo = (Map) ReflectHelper.getValueByFieldName(obj, PageInfo.PAGE);
-            if (hasKey4PageInfo(pageInfo)) {
+            if (hasKeyOfPageInfo((Map) ReflectHelper.getFieldValue(obj, PAGE))) {
                 return i;
             }
         }
@@ -94,13 +83,14 @@ public class PageAspect {
      * @param pageInfo Map
      */
     private void removePageInfos(Map<String, Object> pageInfo) {
-        pageInfo.remove(PageInfo.PAGE_NUM);
-        pageInfo.remove(PageInfo.PAGE_SIZE);
-        pageInfo.remove(PageInfo.TOTAL_PAGE);
-        pageInfo.remove(PageInfo.TOTAL_COUNT);
-        pageInfo.remove(PageInfo.HAS_PRE_PAGE);
-        pageInfo.remove(PageInfo.HAS_NEXT_PAGE);
-        pageInfo.remove(PageInfo.PAGE_LIST);
+        pageInfo.remove(PAGE);
+        pageInfo.remove(PAGE_NUM);
+        pageInfo.remove(PAGE_SIZE);
+        pageInfo.remove(TOTAL_PAGE);
+        pageInfo.remove(TOTAL_COUNT);
+        pageInfo.remove(HAS_PRE_PAGE);
+        pageInfo.remove(HAS_NEXT_PAGE);
+        pageInfo.remove(PAGE_LIST);
     }
 
     /**
@@ -109,56 +99,60 @@ public class PageAspect {
      * @param pageInfo Map
      * @return boolean
      */
-    private boolean hasKey4PageInfo(Map<String, Object> pageInfo) {
-        return pageInfo != null && pageInfo.get(PageInfo.PAGE_NUM) != null;
+    private boolean hasKeyOfPageInfo(Map<String, Object> pageInfo) {
+        return pageInfo != null && pageInfo.get(PAGE_NUM) != null;
+    }
+
+    /**
+     * 重置表及相关参数
+     *
+     * @param obj      Object
+     * @param pageInfo Map
+     */
+    @SuppressWarnings("unchecked")
+    private void resetPageInfo(Object obj, Map<String, Object> pageInfo) {
+        if (obj instanceof Map) {
+            ((Map) obj).remove(PAGE);
+        }
+
+        if (pageInfo != null) {
+            Map<String, Object> page = (Map) pageInfo.remove(PAGE);
+            if (page != null) {
+                pageInfo.putAll(page);
+            }
+
+            if (isFalsePage(obj)) {
+                removePageInfos(pageInfo);
+            }
+        }
     }
 
     /**
      * 设置分页相关信息
      *
-     * @param arc Object
+     * @param src Object
      * @param obj Object
      * @return Map
      * @throws Throwable Throwable
      */
     @SuppressWarnings("unchecked")
-    private Map<String, Object> setPageInfo(Object arc, Object obj) throws Throwable {
-        // String 及包装类型返回 null
-        if (obj instanceof String || obj instanceof Double || obj instanceof Long
-            || obj instanceof Integer || obj instanceof Character || obj instanceof Boolean) {
-            return null;
-        }
-
+    private Map<String, Object> handlePageInfo(Object src, Object obj) throws Throwable {
         // 参数为 Map 类型
         Map<String, Object> pageInfo;
-
         if (obj instanceof Map) {
-            pageInfo = new HashMap((Map) obj);
-            PageInfo.getInstance(pageInfo, arc);
-            Map<String, Object> page = (Map) pageInfo.remove(PageInfo.PAGE);
-
-            if (page != null) {
-                pageInfo.putAll(page);
-            }
-
-            if (PageInfo.isFalsePage(obj)) {
-                removePageInfos(pageInfo);
-            }
-
-            pageInfo.put(PageInfo.DATA_LIST, arc);
+            pageInfo = getInstance(new HashMap((Map) obj), src);
+            resetPageInfo(obj, pageInfo);
+            pageInfo.put(DATA_LIST, src);
         } else { // 参数为其它 Bean
             try {
-                pageInfo = (Map) ReflectHelper.getValueByFieldName(obj, PageInfo.PAGE);
-            } catch (Exception e) {
+                pageInfo = (Map) ReflectHelper.getFieldValue(obj, PAGE);
+            } catch (IllegalAccessException e) {
                 throw new IllegalArgumentException("POJO 缺少必要的 Map page 属性");
             }
 
-            if (null == pageInfo) {
-                pageInfo = new HashMap(16);
-            }
-
-            PageInfo.getInstance(pageInfo, arc);
-            ReflectHelper.setValueByFieldName(obj, PageInfo.PAGE, pageInfo);
+            getInstance(pageInfo == null ? new HashMap() : pageInfo, src);
+            resetPageInfo(obj, pageInfo);
+            ReflectHelper.setFieldValue(obj, PAGE, pageInfo);
         }
 
         return pageInfo;
