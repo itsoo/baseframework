@@ -81,6 +81,7 @@
 ### 五、快速配置工程的技巧
 
 此工程为 Web 后端工程，本质上只需要关注对外提供服务的接口即可，不需要处理视图逻辑，接口定义为 Rest-ful，SpringBoot 版本为 2.0.2
+分页插件的使用请参考 https://github.com/itsoo/mybatis-pagination 与本工程中 bf-page-plugin 完全相同
 
 ### 六、打包及发布
 
